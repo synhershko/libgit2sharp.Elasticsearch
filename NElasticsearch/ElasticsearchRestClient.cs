@@ -174,8 +174,7 @@ namespace NElasticsearch
         public void Index<T>(T obj, string id, string typeName, string indexName = null)
         {
             var request =
-                new RestRequest(indexName ??
-                                DefaultIndexName + "/" + typeName +
+                new RestRequest((indexName ?? DefaultIndexName) + "/" + typeName +
                                 (!string.IsNullOrWhiteSpace(id) ? "/" + id : string.Empty), Method.POST);
 
             
