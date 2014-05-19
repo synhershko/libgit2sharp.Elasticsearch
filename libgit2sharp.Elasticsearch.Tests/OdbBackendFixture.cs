@@ -201,14 +201,14 @@ namespace LibGit2Sharp.Elasticsearch.Tests
         [InlineData(false)]
         public void CanFetch(bool useElasticsearch)
         {
-            using (var repo = Build(useElasticsearch))
+            using (var repo = Build(useElasticsearch)) // TODO this doesn't seem to touch ES
             {
                 Assert.Equal(0, repo.ObjectDatabase.Count());
 
                 repo.Network.Remotes.Add("origin", "https://github.com/libgit2/TestGitRepository");
                 repo.Fetch("origin");
 
-                Assert.Equal(69, repo.ObjectDatabase.Count());
+                Assert.Equal(68, repo.ObjectDatabase.Count());
             }
         }
 
