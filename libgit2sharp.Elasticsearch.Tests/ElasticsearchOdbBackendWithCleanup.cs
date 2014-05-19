@@ -1,4 +1,5 @@
 ﻿using LibGit2Sharp.Elasticsearch;
+using NElasticsearch;
 
 namespace libgit2sharp.Elasticsearch.Tests
 {
@@ -13,5 +14,7 @@ namespace libgit2sharp.Elasticsearch.Tests
             client.DeleteIndex(client.DefaultIndexName);
             base.Dispose();
         }
+
+        public ElasticsearchRestClient Client { get { return client; } }
     }
 }
