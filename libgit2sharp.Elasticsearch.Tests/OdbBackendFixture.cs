@@ -5,6 +5,7 @@ using System.Text;
 using libgit2sharp.Elasticsearch.Tests;
 using Xunit;
 using Xunit.Extensions;
+using GO = libgit2sharp.Elasticsearch.Models.GitObject;
 
 namespace LibGit2Sharp.Elasticsearch.Tests
 {
@@ -55,6 +56,34 @@ namespace LibGit2Sharp.Elasticsearch.Tests
         {
             var dir = new DirectoryInfo(repository.Info.WorkingDirectory);
             return dir.Name.Substring(0, 7);
+        }
+
+        [Fact]
+        public void CanReadSimpleBlobs()
+        {
+            const string indexName = "libgit2sharp-elasticsearch-test";
+            var repo = new ElasticsearchOdbBackendWithCleanup(@"http://localhost:9200", indexName);
+            repo.Client.DeleteIndex(indexName);
+
+            repo.Client.Index(new GO
+            {
+                Data = "dGVzdAo=",
+                Sha = "9daeafb9864cf43055ae93beb0afd6c7d144bfa4",
+                Size = 5,
+                Type = ObjectType.Tree
+            }, "9daeafb9864cf43055ae93beb0afd6c7d144bfa4", "gitobject", indexName);
+
+            var objectId = new ObjectId("9daeafb9864cf43055ae93beb0afd6c7d144bfa4");
+            Stream stream;
+            ObjectType objectType;
+            var ret = repo.Read(objectId, out stream, out objectType);
+            
+            Assert.Equal(/*(int)OdbBackend.ReturnCode.GIT_OK*/ 0, ret);
+            Assert.NotNull(stream);
+            stream.Dispose();
+            Assert.Equal(ObjectType.Tree, objectType);
+
+            repo.Client.DeleteIndex(indexName);            
         }
 
         [Theory]
