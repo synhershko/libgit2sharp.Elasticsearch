@@ -239,8 +239,9 @@ namespace LibGit2Sharp.Elasticsearch.Tests
 
                 repo.Network.Remotes.Add("origin", "https://github.com/libgit2/TestGitRepository");
                 repo.Fetch("origin");
+                repo.Fetch("origin", new FetchOptions { TagFetchMode = TagFetchMode.All });
 
-                Assert.Equal(68, repo.ObjectDatabase.Count());
+                Assert.Equal(70, repo.ObjectDatabase.Count());
             }
         }
 
