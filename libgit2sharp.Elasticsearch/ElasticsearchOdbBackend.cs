@@ -40,7 +40,7 @@ namespace LibGit2Sharp.Elasticsearch
         {
             // TODO cache
             var response = client.Get<GO>(id.Sha, GitObjectsType);
-            if (!response.found)
+            if (response == null || !response.found)
             {
                 objectType = ObjectType.Blob;
                 data = null;
@@ -108,7 +108,7 @@ namespace LibGit2Sharp.Elasticsearch
         {
             // TODO check cache
             var response = client.Get<GO>(id.Sha, GitObjectsType);
-            if (!response.found)
+            if (response == null || !response.found)
             {
                 objectType = ObjectType.Blob;
                 length = 0;
@@ -151,12 +151,14 @@ namespace LibGit2Sharp.Elasticsearch
         {
             // TODO cache
             var response = client.Get<GO>(id.Sha, GitObjectsType);
-            return response.found;
+            return response != null && response.found;
         }
 
         private int ForEachInternal(object query, ForEachCallback callback)
         {
             var curPage = 0;
+            var pageSize = 10;
+            var collectedResults = 0;
 
             // TODO better and more stable paging strategy
             while (true)
@@ -164,18 +166,25 @@ namespace LibGit2Sharp.Elasticsearch
                 var q = new
                 {
                     query = query,
-                    from = curPage * DefaultFetchAllPageSize,
-                    size = DefaultFetchAllPageSize,
+                    from = curPage * pageSize,
+                    size = pageSize,
                     fields = new string[] { }, // force returning only the ID
                 };
+
                 var results = client.Search<GO>(q, client.DefaultIndexName, GitObjectsType);
-                if (results.hits == null || results.hits.hits == null || results.hits.hits.Count == 0)
-                    break;
+                if (results == null) // TODO smarter error handling
+                {
+                    return (int)ReturnCode.GIT_OK;
+                }
 
                 if (results.hits.hits.Select(hit => callback(new ObjectId(hit._id))).Any(ret => ret != (int)ReturnCode.GIT_OK))
                 {
                     return (int)ReturnCode.GIT_EUSER;
                 }
+
+                collectedResults += results.hits.hits.Count;
+                if (results.hits.hits.Count < pageSize || collectedResults == results.hits.total)
+                    break;
 
                 curPage++;
             }

@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Net;
+using System.Text;
 using NElasticsearch.Models;
 using RestSharp;
 
@@ -11,6 +12,8 @@ namespace NElasticsearch.Commands
         {
             var response = client.Execute<SearchResponse<T>>(GetSearchRequest(query, indexName, typeName));
             // TODO post-processing
+            if (response.StatusCode != HttpStatusCode.OK)
+                return null;
             return response.Data;
         }
 
@@ -19,6 +22,8 @@ namespace NElasticsearch.Commands
         {
             var response = client.Execute(GetSearchRequest(query, indexName, typeName));
             // TODO post-processing
+            if (response.StatusCode != HttpStatusCode.OK)
+                return null;
             return response.Content;
         }
 

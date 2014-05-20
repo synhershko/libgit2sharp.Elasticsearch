@@ -168,6 +168,8 @@ namespace NElasticsearch
             request.RequestFormat = DataFormat.Json;
             var response = Execute<GetResponse<T>>(request);
             // TODO post-processing
+            if (response.StatusCode != HttpStatusCode.OK)
+                return null;
             return response.Data;
         }
 
