@@ -191,5 +191,11 @@ namespace NElasticsearch
             var request = new RestRequest(indexName, Method.DELETE);
             var response = Execute(request);
         }
+
+        public void Refresh(string indexName = null)
+        {
+            var request = new RestRequest((indexName ?? DefaultIndexName) + "/_refresh", Method.POST);
+            var response = Execute(request);
+        }
     }
 }

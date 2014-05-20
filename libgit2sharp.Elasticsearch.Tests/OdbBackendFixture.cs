@@ -50,7 +50,7 @@ namespace LibGit2Sharp.Elasticsearch.Tests
         private static void SetElasticsearchOdbBackend(Repository repository, string repoName, bool dispose = true)
         {
             var backend = dispose
-                ? new ElasticsearchOdbBackendWithCleanup(@"http://localhost:9200", repoName)
+                ? new ElasticsearchOdbBackendForTests(@"http://localhost:9200", repoName)
                 : new ElasticsearchOdbBackend(@"http://localhost:9200", repoName);
             repository.ObjectDatabase.AddBackend(backend, priority: 5);
         }
@@ -65,7 +65,7 @@ namespace LibGit2Sharp.Elasticsearch.Tests
         public void CanReadSimpleBlobs()
         {
             const string indexName = "libgit2sharp-elasticsearch-test";
-            var repo = new ElasticsearchOdbBackendWithCleanup(@"http://localhost:9200", indexName);
+            var repo = new ElasticsearchOdbBackendForTests(@"http://localhost:9200", indexName);
             repo.Client.DeleteIndex(indexName);
 
             repo.Client.Index(new GO
