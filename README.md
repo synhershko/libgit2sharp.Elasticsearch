@@ -3,6 +3,8 @@ libgit2sharp.Elasticsearch
 
 Elasticsearch backend for git repositories
 
+Use Elasticsearch to store your git repositories and make them highly-available, or use the power of git to make the most out of your document store
+
 ## Usage
 
 To run Elasticsearch locally follow these instructions:
