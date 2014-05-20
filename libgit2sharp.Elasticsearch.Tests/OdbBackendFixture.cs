@@ -33,7 +33,7 @@ namespace LibGit2Sharp.Elasticsearch.Tests
             return repository;
         }
 
-        private Repository Build(bool useElasticsearch)
+        private Repository Build(bool useElasticsearch, bool dispose = true)
         {
             var repository = InitNewRepository(TempPath);
 
@@ -42,14 +42,17 @@ namespace LibGit2Sharp.Elasticsearch.Tests
                 return repository;
             }
 
-            SetElasticsearchOdbBackend(repository, IndexNameFrom(repository));
+            SetElasticsearchOdbBackend(repository, IndexNameFrom(repository), dispose);
 
             return repository;
         }
 
-        private static void SetElasticsearchOdbBackend(Repository repository, string repoName)
+        private static void SetElasticsearchOdbBackend(Repository repository, string repoName, bool dispose = true)
         {
-            repository.ObjectDatabase.AddBackend(new ElasticsearchOdbBackendWithCleanup(@"http://localhost:9200", repoName), priority: 5);
+            var backend = dispose
+                ? new ElasticsearchOdbBackendWithCleanup(@"http://localhost:9200", repoName)
+                : new ElasticsearchOdbBackend(@"http://localhost:9200", repoName);
+            repository.ObjectDatabase.AddBackend(backend, priority: 5);
         }
 
         private static string IndexNameFrom(Repository repository)
@@ -249,7 +252,7 @@ namespace LibGit2Sharp.Elasticsearch.Tests
 
             const string blobSha = "dea509d0b3cb8ee0650f6ca210bc83f4678851ba";
 
-            using (var repo = Build(useElasticsearch: true))
+            using (var repo = Build(true, false))
             {
                 Blob blob = CreateBlob(repo, "aabqhq\n");
                 Assert.Equal(blobSha, blob.Sha);
@@ -262,7 +265,7 @@ namespace LibGit2Sharp.Elasticsearch.Tests
             {
                 Assert.Null(repo.Lookup<Blob>(blobSha));
 
-                SetElasticsearchOdbBackend(repo, indexName);
+                SetElasticsearchOdbBackend(repo, indexName, true);
 
                 var blob = repo.Lookup<Blob>(blobSha);
                 Assert.Equal(blobSha, blob.Sha);
