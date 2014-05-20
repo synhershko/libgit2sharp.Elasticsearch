@@ -49,9 +49,12 @@ namespace LibGit2Sharp.Elasticsearch
 
             var obj = response._source;
             objectType = obj.Type;
-            data = new MemoryStream(obj.GetDataAsByteArray(), false);
 
-            return (int)ReturnCode.GIT_OK;            
+            data = Allocate(obj.Size);
+            var bytes = obj.GetDataAsByteArray();
+            data.Write(bytes, 0, bytes.Length);
+
+            return (int) ReturnCode.GIT_OK;
         }
 
         private const int DefaultPageSize = 10;
