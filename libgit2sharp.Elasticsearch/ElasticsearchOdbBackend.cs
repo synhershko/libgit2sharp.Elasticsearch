@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using NElasticsearch;
 using NElasticsearch.Commands;
+using NElasticsearch.Models;
 using RestSharp.Extensions;
 using GO = libgit2sharp.Elasticsearch.Models.GitObject;
 
@@ -13,7 +14,9 @@ namespace LibGit2Sharp.Elasticsearch
 {
     public class ElasticsearchOdbBackend : OdbBackend
     {
-        private readonly ConcurrentDictionary<string, GO> _cache = new ConcurrentDictionary<string, GO>(); 
+        private readonly ConcurrentDictionary<string, GO> _cache = new ConcurrentDictionary<string, GO>();
+
+        public bool EnableCaching { get; set; }
 
         private readonly string _indexName;
         protected ElasticsearchRestClient client;
@@ -38,16 +41,18 @@ namespace LibGit2Sharp.Elasticsearch
 
         public override int Read(ObjectId id, out Stream data, out ObjectType objectType)
         {
-            // TODO cache
-            var response = client.Get<GO>(id.Sha, GitObjectsType);
-            if (response == null || !response.found)
+            GO obj;
+            if (!EnableCaching || !_cache.TryGetValue(id.Sha, out obj) || obj.Data == null)
             {
-                objectType = ObjectType.Blob;
-                data = null;
-                return (int) ReturnCode.GIT_ENOTFOUND;
+                var response = ReadInternal(id.Sha, true);
+                if (response == null || !response.found)
+                {
+                    objectType = ObjectType.Blob; data = null; // these will be ignored
+                    return (int)ReturnCode.GIT_ENOTFOUND;
+                }
+                obj = response._source;
             }
 
-            var obj = response._source;
             objectType = obj.Type;
 
             data = Allocate(obj.Length);
@@ -106,31 +111,50 @@ namespace LibGit2Sharp.Elasticsearch
 
         public override int ReadHeader(ObjectId id, out int length, out ObjectType objectType)
         {
-            // TODO check cache
-            var response = client.Get<GO>(id.Sha, GitObjectsType);
-            if (response == null || !response.found)
+            GO obj;
+            if (!EnableCaching || !_cache.TryGetValue(id.Sha, out obj))
             {
-                objectType = ObjectType.Blob;
-                length = 0;
-                return (int)ReturnCode.GIT_ENOTFOUND;
+                var response = ReadInternal(id.Sha, false);
+                if (response == null || !response.found)
+                {
+                    objectType = ObjectType.Blob; length = 0; // these will be ignored
+                    return (int)ReturnCode.GIT_ENOTFOUND;
+                }
+                obj = response._source;
             }
 
-            var obj = response._source;
             objectType = obj.Type;
             length = (int) obj.Length;
 
             return (int)ReturnCode.GIT_OK; 
         }
 
+        private GetResponse<GO> ReadInternal(string sha, bool needsData)
+        {
+            // TODO implement needsData
+            return client.Get<GO>(sha, GitObjectsType);
+        }
+
+        /// <summary>
+        /// Writes a git object to the backend. Assumes libgit2 calls Exists before (which is indeed the case)
+        /// </summary>
+        /// <param name="id"></param>
+        /// <param name="dataStream"></param>
+        /// <param name="length"></param>
+        /// <param name="objectType"></param>
+        /// <returns></returns>
         public override int Write(ObjectId id, Stream dataStream, long length, ObjectType objectType)
         {
-            client.Index(new GO
+            var gitObject = new GO
             {
                 Length = length,
                 Type = objectType,
                 Sha = id.Sha,
                 Data = Convert.ToBase64String(dataStream.ReadAsBytes()),
-            }, id.Sha, GitObjectsType);
+            };
+
+            client.Index(gitObject, id.Sha, GitObjectsType);
+            if (EnableCaching) _cache.TryAdd(id.Sha, gitObject);            
 
             return (int)ReturnCode.GIT_OK;
         }
@@ -147,8 +171,15 @@ namespace LibGit2Sharp.Elasticsearch
 
         public override bool Exists(ObjectId id)
         {
-            // TODO cache
+            if (EnableCaching && _cache.ContainsKey(id.Sha))
+                return true;
+
             var response = client.Get<GO>(id.Sha, GitObjectsType);
+            if (EnableCaching && response != null && response.found)
+            {
+                _cache.TryAdd(id.Sha, response._source);
+            }
+
             return response != null && response.found;
         }
 
@@ -203,7 +234,7 @@ namespace LibGit2Sharp.Elasticsearch
                 return OdbBackendOperations.Read |
                        OdbBackendOperations.Write |
                        OdbBackendOperations.ReadPrefix |
-                       OdbBackendOperations.Exists |
+                       OdbBackendOperations.Exists |                   
                        OdbBackendOperations.ForEach;
             }
         }
