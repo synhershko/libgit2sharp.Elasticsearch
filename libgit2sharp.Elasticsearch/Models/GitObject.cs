@@ -20,7 +20,7 @@ namespace libgit2sharp.Elasticsearch.Models
         /// </summary>
         public string Data { get; set; }
         public string Sha { get; set; }
-        public long Size { get; set; }
+        public long Length { get; set; }
         public ObjectType Type { get; set; }
     }
 }

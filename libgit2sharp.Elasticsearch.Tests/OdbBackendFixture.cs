@@ -72,7 +72,7 @@ namespace LibGit2Sharp.Elasticsearch.Tests
             {
                 Data = "dGVzdAo=",
                 Sha = "9daeafb9864cf43055ae93beb0afd6c7d144bfa4",
-                Size = 5,
+                Length = 5,
                 Type = ObjectType.Tree
             }, "9daeafb9864cf43055ae93beb0afd6c7d144bfa4", "gitobject", indexName);
 

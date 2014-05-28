@@ -50,7 +50,7 @@ namespace LibGit2Sharp.Elasticsearch
             var obj = response._source;
             objectType = obj.Type;
 
-            data = Allocate(obj.Size);
+            data = Allocate(obj.Length);
             var bytes = obj.GetDataAsByteArray();
             data.Write(bytes, 0, bytes.Length);
 
@@ -117,7 +117,7 @@ namespace LibGit2Sharp.Elasticsearch
 
             var obj = response._source;
             objectType = obj.Type;
-            length = (int) obj.Size;
+            length = (int) obj.Length;
 
             return (int)ReturnCode.GIT_OK; 
         }
@@ -126,7 +126,7 @@ namespace LibGit2Sharp.Elasticsearch
         {
             client.Index(new GO
             {
-                Size = length,
+                Length = length,
                 Type = objectType,
                 Sha = id.Sha,
                 Data = Convert.ToBase64String(dataStream.ReadAsBytes()),
