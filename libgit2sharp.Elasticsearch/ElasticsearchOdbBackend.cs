@@ -54,7 +54,6 @@ namespace LibGit2Sharp.Elasticsearch
             }
 
             objectType = obj.Type;
-
             data = Allocate(obj.Length);
             var bytes = obj.GetDataAsByteArray();
             data.Write(bytes, 0, bytes.Length);
@@ -62,51 +61,44 @@ namespace LibGit2Sharp.Elasticsearch
             return (int) ReturnCode.GIT_OK;
         }
 
-        private const int DefaultPageSize = 10;
         public override int ReadPrefix(string shortSha, out ObjectId id, out Stream data, out ObjectType objectType)
         {
             id = null;
             data = null;
             objectType = default(ObjectType);
 
-            ObjectId matchingKey = null;
-            bool moreThanOneMatchingKeyHasBeenFound = false;
-
-            var query = new {constant_score = new {filter = new {prefix = new {Sha = shortSha}}}};
-            var ret = ForEachInternal(query, objectId =>
+            var q = new
             {
-                if (matchingKey != null)
-                {
-                    moreThanOneMatchingKeyHasBeenFound = true;
-                    return (int)ReturnCode.GIT_EAMBIGUOUS;
-                }
+                query = new {constant_score = new {filter = new {prefix = new {Sha = shortSha}}}},
+                from = 0, size = 1,
+            };
 
-                matchingKey = objectId;
+            // TODO support user interrupts and return (int)ReturnCode.GIT_EUSER
+            var results = client.Search<GO>(q, client.DefaultIndexName, GitObjectsType);
+            if (results.hits.total == 0)
+            {
+                return (int) ReturnCode.GIT_ENOTFOUND;
+            }
+
+            if (results.hits.total == 1)
+            {
+                var obj = results.hits.hits[0]._source;
+                id = new ObjectId(results.hits.hits[0]._id);
+                if (EnableCaching)
+                {
+                    _cache.TryAdd(id.Sha, obj);
+                }
+                
+                objectType = obj.Type;
+                data = Allocate(obj.Length);
+                var bytes = obj.GetDataAsByteArray();
+                data.Write(bytes, 0, bytes.Length);
 
                 return (int)ReturnCode.GIT_OK;
-            });
-
-            if (ret != (int)ReturnCode.GIT_OK
-                && ret != (int)ReturnCode.GIT_EUSER)
-            {
-                return ret;
             }
-
-            if (moreThanOneMatchingKeyHasBeenFound)
-            {
-                return (int)ReturnCode.GIT_EAMBIGUOUS;
-            }
-
-            ret = Read(matchingKey, out data, out objectType);
-
-            if (ret != (int)ReturnCode.GIT_OK)
-            {
-                return ret;
-            }
-
-            id = matchingKey;
-
-            return (int)ReturnCode.GIT_OK;
+            
+            // More than 1 result returned, so the short sha is ambigous
+            return (int)ReturnCode.GIT_EAMBIGUOUS;
         }
 
         public override int ReadHeader(ObjectId id, out int length, out ObjectType objectType)
