@@ -142,9 +142,7 @@ namespace LibGit2Sharp.Elasticsearch
 
         public override int WriteStream(long length, ObjectType objectType, out OdbBackendStream stream)
         {
-            stream = new ElasticsearchOdbBackendWriteOnlyStream(this, objectType, length);
-
-            return (int)ReturnCode.GIT_OK;
+            throw new NotImplementedException("WriteStream");
         }
 
         public override bool Exists(ObjectId id)
